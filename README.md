@@ -6,7 +6,7 @@
 pip3 install requests
 
 ### Geting Start
-python server.py -h
+python3 server.py -h
 
     usage: server.py [-h] [-t testnet] -s server -p port
 
