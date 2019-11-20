@@ -8,9 +8,13 @@ python server.py -h
 usage: server.py [-h] [-t testnet] -s server -p port
 
 optional arguments:
+
   -h, --help  show this help message and exit
+
   -t testnet  use test network
+
   -s server   server listen address
+
   -p port     server listen port
 
 
