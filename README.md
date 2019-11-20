@@ -1,23 +1,27 @@
 # signature_shortcut
 
-pip install requests
 
+### Install Requirements
 
+pip3 install requests
+
+### Geting Start
 python server.py -h
 
-usage: server.py [-h] [-t testnet] -s server -p port
+    usage: server.py [-h] [-t testnet] -s server -p port
 
-optional arguments:
+    optional arguments:
 
-  -h, --help  show this help message and exit
+      -h, --help  show this help message and exit
 
-  -t testnet  use test network
+      -t testnet  use test network
 
-  -s server   server listen address
+      -s server   server listen address
 
-  -p port     server listen port
+      -p port     server listen port
 
 
+### Run
 python3 server.py -t true -s 127.0.0.1 -p 9999
 
 
