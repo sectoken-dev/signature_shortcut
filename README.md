@@ -3,10 +3,13 @@
 
 ### Install Requirements
 
+```
 pip3 install requests
+```
 
 ### Geting Started
 
+```
 python3 server.py -h
 
     usage: server.py [-h] [-t testnet] -s server -p port
@@ -20,12 +23,13 @@ python3 server.py -h
       -s server   server listen address
 
       -p port     server listen port
-
+```
 
 ### Running
 
+```
 python3 server.py -t true -s 127.0.0.1 -p 9999
-
+```
 
 ### Examples
 
