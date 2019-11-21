@@ -35,9 +35,10 @@ class SignatureShortcut(BaseHTTPRequestHandler):
         handle = route.get(self.path)
         if handle is not None:
             handle(json_body)
+            return
 
         self.send_response(404)
-        return
+        return 
 
     def handle_eth_single(self, json_body):
         hmac = json_body.get('HMAC')
