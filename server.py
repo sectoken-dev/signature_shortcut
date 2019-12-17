@@ -3,6 +3,7 @@ import json
 from http.server import BaseHTTPRequestHandler, HTTPServer
 
 from btc_request import make_and_send as btc_make_and_send
+from bch_request import make_and_send as bch_make_and_send
 from ltc_request import make_and_send as ltc_make_and_send
 from usdt_request import make_and_send as usdt_make_and_send
 from eth_single_request import make_and_send as eths_make_and_send
@@ -31,14 +32,14 @@ class SignatureShortcut(BaseHTTPRequestHandler):
             '/btc': self.handle_btc,
             '/ltc': self.handle_ltc,
             '/usdt': self.handle_usdt,
+            '/bch': self.handle_bch,
         }
         handle = route.get(self.path)
         if handle is not None:
             handle(json_body)
-            return
 
         self.send_response(404)
-        return 
+        return
 
     def handle_eth_single(self, json_body):
         hmac = json_body.get('HMAC')
@@ -116,6 +117,26 @@ class SignatureShortcut(BaseHTTPRequestHandler):
 
         try:
             txid = ltc_make_and_send(URL, hmac, wallet_id, outputs, feerate, total, memo, privkey)
+        except BaseException as e:
+            self.wfile.write(json.dumps({'code': 500, 'txid': '', 'error': str(e)}).encode())
+            return
+
+        self.wfile.write(json.dumps({'code': 200, 'txid': txid, 'error': ''}).encode())
+
+    def handle_bch(self, json_body):
+        hmac = json_body.get('HMAC')
+        wallet_id = json_body.get('wallet_id')
+        outputs = json_body.get('outputs')
+        feerate = json_body.get('feerate', 0)
+        total = json_body.get('total', False)
+        privkey = json_body.get('privkey', '')
+        memo = json_body.get('memo', '')
+        if not (hmac and wallet_id and outputs):
+            self.send_response(400)
+            return
+
+        try:
+            txid = bch_make_and_send(URL, hmac, wallet_id, outputs, feerate, total, memo, privkey)
         except BaseException as e:
             self.wfile.write(json.dumps({'code': 500, 'txid': '', 'error': str(e)}).encode())
             return
