@@ -79,6 +79,20 @@ curl "http://127.0.0.1:9999/ltc" -H "Content-Type:application/json" -X POST -d '
 * [sign transaction](https://sectoken-dev.github.io/docs/tools.en.html#ltc-sign)
 * [submit transaction](https://sectoken-dev.github.io/docs/ltc.en.html#submit-signature)
 
+
+bch:
+
+```
+curl "http://127.0.0.1:9999/bch" -H "Content-Type:application/json" -X POST -d '{"HMAC": "mIzMmNlZ2Mg1MTYDZODc0MTQ4ZmRlZTE2NmI=","wallet_id":"140f268a2f5322b010990eceabf1bc40","outputs":{"address":"bchtest:pzve7xw36mdpffwwnyw6fw8t40y20n0am5kuwz8cwt","value":"1000"}, "privkey":"d923a136aa3492b52b0b75757e565f837318ab6d406481241e98aa5f09accd62"}'
+```
+
+#### The program requests the following API
+
+* [build transaction](https://sectoken-dev.github.io/docs/bch.en.html#build-transaction)
+* [sign transaction](https://sectoken-dev.github.io/docs/tools.en.html#bch-sign)
+* [submit transaction](https://sectoken-dev.github.io/docs/bch.en.html#submit-signature)
+
+
 usdt:
 
 ```
