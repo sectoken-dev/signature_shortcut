@@ -55,7 +55,7 @@ response:
 * [sign transaction](https://sectoken-dev.github.io/docs/tools.en.html#eth-single-sign)
 * [submit transaction](https://sectoken-dev.github.io/docs/eth.single.en.html#submit-transaction)
 
-#### ETH_MULTI:
+#### ETH_MULTI
 
 request:
 
