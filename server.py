@@ -2,12 +2,15 @@ import argparse
 import json
 from http.server import BaseHTTPRequestHandler, HTTPServer
 
-from btc_request import make_and_send as btc_make_and_send
-from bch_request import make_and_send as bch_make_and_send
-from ltc_request import make_and_send as ltc_make_and_send
+from coin_request import make_and_send as coin_make_and_send
 from usdt_request import make_and_send as usdt_make_and_send
 from eth_single_request import make_and_send as eths_make_and_send
 from eth_multi_request import make_and_send as ethm_make_and_send
+from eos_request import make_and_send as eos_make_and_send
+from trx_request import make_and_send as trx_make_and_send
+from xrp_request import make_and_send as xrp_make_and_send
+from xlm_request import make_and_send as xlm_make_and_send
+from config import SERVER, PORT
 
 
 class SignatureShortcut(BaseHTTPRequestHandler):
@@ -27,17 +30,20 @@ class SignatureShortcut(BaseHTTPRequestHandler):
             return
 
         route = {
+            '/bch': self.handle_coin,
+            '/btc': self.handle_coin,
+            '/dash': self.handle_coin,
+            '/ltc': self.handle_coin,
+            '/usdt': self.handle_usdt,
             '/eth_single': self.handle_eth_single,
             '/eth': self.handle_eth_multi,
-            '/btc': self.handle_btc,
-            '/ltc': self.handle_ltc,
-            '/usdt': self.handle_usdt,
-            '/bch': self.handle_bch,
+
         }
         handle = route.get(self.path)
         if handle is not None:
+            json_body["_coin"] = self.path[1:]
             handle(json_body)
-
+            return
         self.send_response(404)
         return
 
@@ -46,17 +52,18 @@ class SignatureShortcut(BaseHTTPRequestHandler):
         wallet_id = json_body.get('wallet_id')
         to_address = json_body.get('to_address')
         value = str(json_body.get('value', '0'))
-        coin_type = json_body.get('coin_type', 'ETH')
-        feerate = json_body.get('feerate', 0)
-        total = json_body.get('total', False)
+        coin = json_body.get('coin', 'ETH')
+        gas_price = json_body.get('gas_price', 0)
+        total = json_body.get('total', 0)
         privkey = json_body.get('privkey', '')
+        _coin = json_body.get("_coin")
 
         if not (hmac and wallet_id and to_address and value):
             self.send_response(400)
             return
 
         try:
-            txid = eths_make_and_send(URL, hmac, wallet_id, to_address, value, coin_type, feerate, total, privkey)
+            txid = eths_make_and_send(hmac, wallet_id, to_address, value, coin, gas_price, total, privkey, _coin)
         except BaseException as e:
             self.wfile.write(json.dumps({'code': 500, 'txid': '', 'error': str(e)}).encode())
             return
@@ -66,77 +73,17 @@ class SignatureShortcut(BaseHTTPRequestHandler):
     def handle_eth_multi(self, json_body):
         hmac = json_body.get('HMAC')
         wallet_id = json_body.get('wallet_id')
-        to_address = json_body.get('to_address')
-        value = str(json_body.get('value', '0'))
-        coin_type = json_body.get('coin_type', 'ETH')
-        feerate = json_body.get('feerate', 0)
-        privkey = json_body.get('privkey', '')
-        if not (hmac and wallet_id and to_address and value):
-            self.send_response(400)
-            return
-
-        try:
-            txid = ethm_make_and_send(URL, hmac, wallet_id, to_address, value, coin_type, feerate, privkey)
-        except BaseException as e:
-            self.wfile.write(json.dumps({'code': 500, 'txid': '', 'error': str(e)}).encode())
-            return
-
-        self.wfile.write(json.dumps({'code': 200, 'txid': txid, 'error': ''}).encode())
-
-    def handle_btc(self, json_body):
-        hmac = json_body.get('HMAC')
-        wallet_id = json_body.get('wallet_id')
         outputs = json_body.get('outputs')
+        coin = json_body.get('coin', 'ETH')
         feerate = json_body.get('feerate', 0)
-        total = json_body.get('total', False)
         privkey = json_body.get('privkey', '')
-        memo = json_body.get('memo', '')
+        _coin = json_body.get("_coin")
         if not (hmac and wallet_id and outputs):
             self.send_response(400)
             return
 
         try:
-            txid = btc_make_and_send(URL, hmac, wallet_id, outputs, feerate, total, memo, privkey)
-        except BaseException as e:
-            self.wfile.write(json.dumps({'code': 500, 'txid': '', 'error': str(e)}).encode())
-            return
-
-        self.wfile.write(json.dumps({'code': 200, 'txid': txid, 'error': ''}).encode())
-
-    def handle_ltc(self, json_body):
-        hmac = json_body.get('HMAC')
-        wallet_id = json_body.get('wallet_id')
-        outputs = json_body.get('outputs')
-        feerate = json_body.get('feerate', 0)
-        total = json_body.get('total', False)
-        privkey = json_body.get('privkey', '')
-        memo = json_body.get('memo', '')
-        if not (hmac and wallet_id and outputs):
-            self.send_response(400)
-            return
-
-        try:
-            txid = ltc_make_and_send(URL, hmac, wallet_id, outputs, feerate, total, memo, privkey)
-        except BaseException as e:
-            self.wfile.write(json.dumps({'code': 500, 'txid': '', 'error': str(e)}).encode())
-            return
-
-        self.wfile.write(json.dumps({'code': 200, 'txid': txid, 'error': ''}).encode())
-
-    def handle_bch(self, json_body):
-        hmac = json_body.get('HMAC')
-        wallet_id = json_body.get('wallet_id')
-        outputs = json_body.get('outputs')
-        feerate = json_body.get('feerate', 0)
-        total = json_body.get('total', False)
-        privkey = json_body.get('privkey', '')
-        memo = json_body.get('memo', '')
-        if not (hmac and wallet_id and outputs):
-            self.send_response(400)
-            return
-
-        try:
-            txid = bch_make_and_send(URL, hmac, wallet_id, outputs, feerate, total, memo, privkey)
+            txid = ethm_make_and_send(hmac, wallet_id, outputs, coin, feerate, privkey, _coin)
         except BaseException as e:
             self.wfile.write(json.dumps({'code': 500, 'txid': '', 'error': str(e)}).encode())
             return
@@ -152,12 +99,121 @@ class SignatureShortcut(BaseHTTPRequestHandler):
         total = json_body.get('total', False)
         privkey = json_body.get('privkey', '')
         memo = json_body.get('memo', '')
-        if not (hmac and wallet_id and to_address, value):
+        _coin = json_body.get("_coin")
+        if not (hmac and wallet_id and to_address and value):
             self.send_response(400)
             return
 
         try:
-            txid = usdt_make_and_send(URL, hmac, wallet_id, to_address, value, feerate, total, memo, privkey)
+            txid = usdt_make_and_send(hmac, wallet_id, to_address, value, feerate, total, memo, privkey, _coin)
+        except BaseException as e:
+            self.wfile.write(json.dumps({'code': 500, 'txid': '', 'error': str(e)}).encode())
+            return
+
+        self.wfile.write(json.dumps({'code': 200, 'txid': txid, 'error': ''}).encode())
+
+    def handle_coin(self, json_body):
+        hmac = json_body.get('HMAC')
+        wallet_id = json_body.get('wallet_id')
+        outputs = json_body.get('outputs')
+        feerate = json_body.get('feerate', 0)
+        total = json_body.get('total', 0)
+        privkey = json_body.get('privkey', '')
+        memo = json_body.get('memo', '')
+        confirm_target = json_body.get("confirm_target", 0)
+        _coin = json_body.get("_coin", "btc")
+        if not (hmac and wallet_id and outputs):
+            self.send_response(400)
+            return
+
+        try:
+            txid = coin_make_and_send(hmac, wallet_id, outputs, feerate, total, memo, privkey, confirm_target, _coin)
+        except BaseException as e:
+            self.wfile.write(json.dumps({'code': 500, 'txid': '', 'error': str(e)}).encode())
+            return
+
+        self.wfile.write(json.dumps({'code': 200, 'txid': txid, 'error': ''}).encode())
+
+    def handle_eos(self, json_body):
+        hmac = json_body.get('HMAC')
+        wallet_id = json_body.get('wallet_id')
+        outputs = json_body.get('outputs')
+        coin = json_body.get('coin', 'eos')
+        privkey = json_body.get('privkey', '')
+        memo = json_body.get('memo', '')
+        _coin = json_body.get("_coin")
+        if not (hmac and wallet_id and outputs):
+            self.send_response(400)
+            return
+
+        try:
+            txid = eos_make_and_send(hmac, wallet_id, outputs, coin, memo, privkey, _coin)
+        except BaseException as e:
+            self.wfile.write(json.dumps({'code': 500, 'txid': '', 'error': str(e)}).encode())
+            return
+
+        self.wfile.write(json.dumps({'code': 200, 'txid': txid, 'error': ''}).encode())
+
+    def handle_trx(self, json_body):
+        hmac = json_body.get('HMAC')
+        wallet_id = json_body.get('wallet_id')
+        to_address = json_body.get('to_address')
+        value = json_body.get('value')
+        coin = json_body.get('coin', 'eos')
+        privkey = json_body.get('privkey', '')
+        memo = json_body.get('memo', '')
+        total = json_body.get('total', 0)
+        _coin = json_body.get("_coin")
+        if not (hmac and wallet_id and to_address and value):
+            self.send_response(400)
+            return
+
+        try:
+            txid = trx_make_and_send(hmac, wallet_id, to_address, value, coin, memo, total, privkey, _coin)
+        except BaseException as e:
+            self.wfile.write(json.dumps({'code': 500, 'txid': '', 'error': str(e)}).encode())
+            return
+
+        self.wfile.write(json.dumps({'code': 200, 'txid': txid, 'error': ''}).encode())
+
+    def handle_xrp(self, json_body):
+        hmac = json_body.get('HMAC')
+        wallet_id = json_body.get('wallet_id')
+        to_address = json_body.get('to_address')
+        value = json_body.get('value')
+        coin = json_body.get('coin', 'eos')
+        privkey = json_body.get('privkey', '')
+        memo = json_body.get('memo', '')
+        total = json_body.get('total', 0)
+        _coin = json_body.get("_coin")
+        if not (hmac and wallet_id and to_address and value):
+            self.send_response(400)
+            return
+
+        try:
+            txid = xrp_make_and_send(hmac, wallet_id, to_address, value, coin, memo, total, privkey, _coin)
+        except BaseException as e:
+            self.wfile.write(json.dumps({'code': 500, 'txid': '', 'error': str(e)}).encode())
+            return
+
+        self.wfile.write(json.dumps({'code': 200, 'txid': txid, 'error': ''}).encode())
+
+    def handle_xlm(self, json_body):
+        hmac = json_body.get('HMAC')
+        wallet_id = json_body.get('wallet_id')
+        to_address = json_body.get('to_address')
+        value = json_body.get('value')
+        coin = json_body.get('coin', 'eos')
+        privkey = json_body.get('privkey', '')
+        memo = json_body.get('memo', '')
+        total = json_body.get('total', 0)
+        _coin = json_body.get("_coin")
+        if not (hmac and wallet_id and to_address and value):
+            self.send_response(400)
+            return
+
+        try:
+            txid = xlm_make_and_send(hmac, wallet_id, to_address, value, coin, memo, total, privkey, _coin)
         except BaseException as e:
             self.wfile.write(json.dumps({'code': 500, 'txid': '', 'error': str(e)}).encode())
             return
@@ -166,15 +222,16 @@ class SignatureShortcut(BaseHTTPRequestHandler):
 
 
 if __name__ == '__main__':
-    URL = 'https://testnet.sectoken.io/'
+    # URL = 'https://testnet.sectoken.io/'
+    #
+    # parser = argparse.ArgumentParser()
+    # parser.add_argument('-t', metavar='testnet', default=False, dest='testnet', help='use test network')
+    # parser.add_argument('-s', metavar='server', dest='server', required=True, help='server listen address')
+    # parser.add_argument('-p', metavar='port', dest='port', required=True, help='server listen port')
+    # args = parser.parse_args()
+    # if not bool(args.testnet):
+    #     URL = 'main net url'
 
-    parser = argparse.ArgumentParser()
-    parser.add_argument('-t', metavar='testnet', default=False, dest='testnet', help='use test network')
-    parser.add_argument('-s', metavar='server', dest='server', required=True, help='server listen address')
-    parser.add_argument('-p', metavar='port', dest='port', required=True, help='server listen port')
-    args = parser.parse_args()
-    if not bool(args.testnet):
-        URL = 'main net url'
-
-    server = HTTPServer((args.server, int(args.port)), SignatureShortcut)
+    server = HTTPServer((SERVER, int(PORT)), SignatureShortcut)
+    print(f"server already run at http://{SERVER}:{PORT}")
     server.serve_forever()

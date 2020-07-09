@@ -1,75 +1,73 @@
 import base64
-
 import requests
+from config import HOST, SIGNATURE_HOST, NETWORK
 
 
-def make_and_send(url: str, hmac: str, wallet_id: str, to_address: str, value: str, feerate: int = 0,
-                  total: bool = False, memo: str = '', privkey: str = ''):
-    code, ips, scs, ops, prikey = make_tx(url, hmac, wallet_id, to_address, value, memo, feerate, total)
-    if code != 200:
-        raise BaseException(f'make tx response code {code}')
+def make_and_send(hmac: str, wallet_id: str, to_address: str, value: str, feerate: int = 0,
+                  total: int = 0, memo: str = "", privkey: str = "", _coin: str = "usdt"):
+    make_res = make_tx(hmac, wallet_id, to_address, value, memo, feerate, total, _coin)
 
-    if url.startswith('https://testnet'):
-        network = 'testnet'
-    else:
-        network = 'mainnet'
+    make_res_privkey = base64.b64decode(make_res['privkey']).decode() if make_res['privkey'] else ""
+    privkey = privkey if privkey else make_res_privkey
+    inputs = make_res['unsigned_tx']['inputs']
+    scripts = make_res['unsigned_tx']['scripts']
+    outputs = make_res['unsigned_tx']['outputs']
+    sequence_id = make_res["sequence_id"]
 
-    if prikey != "":
-        privkey = prikey
+    sign_res = sign_tx(inputs, scripts, outputs, privkey, NETWORK, _coin)
+    signed_tx = sign_res.get("signed_tx")
 
-    code, signed = sign_tx(ips, scs, ops, privkey, network)
-    if code != 200:
-        raise BaseException(f'sign tx response code {code}')
-    code, txid = send_tx(url, hmac, wallet_id, signed)
-    if code != 200:
-        raise BaseException(f'submit tx response code {code}')
-    return txid
+    send_res = send_tx(hmac, wallet_id, signed_tx, sequence_id, _coin)
+
+    return send_res.get("txid")
 
 
-def make_tx(url: str, hmac: str, wallet_id: str, to_address: str, value: str, memo: str = '', feerate: int = 0,
-            total: bool = False):
-    resp = requests.post(url + 'wallet/usdt/dotx/', headers={'HMAC': hmac},
-                         json={'wallet_id': wallet_id, 'to_address': to_address, 'value': value, 'feerate': feerate,
-                               'total': total, 'memo': memo})
+def make_tx(hmac: str, wallet_id: str, to_address: str, value: str, memo: str = "", feerate: int = 0,
+            total: int = 0, _coin: str = "usdt"):
+    resp = requests.post(
+        url=HOST + f"wallet/{_coin}/dotx/",
+        headers={"HMAC": hmac},
+        json={"wallet_id": wallet_id, "to_address": to_address, "value": value, "feerate": feerate,
+              "total": total, "memo": memo}
+    )
     if resp.status_code != 200:
-        raise BaseException(f'make tx HTTP response code {resp.status_code}')
+        raise BaseException(f"make tx HTTP response code {resp.status_code}")
 
     json_resp = resp.json()
-    code = json_resp['code']
+    code = json_resp["code"]
     if code != 200:
-        return code, None, None, None, None
+        raise BaseException(f"make tx response code {code}")
 
-    privkey = ''
-    if json_resp['data']['privkey'] != "":
-        privkey = base64.b64decode(json_resp['data']['privkey']).decode()
-
-    return 200, json_resp['data']['unsigned_tx']['inputs'], json_resp['data']['unsigned_tx']['scripts'], \
-           json_resp['data']['unsigned_tx']['outputs'], privkey
+    return json_resp.get("data")
 
 
-def sign_tx(inputs: list, scripts: list, outputs: list, privkey: str, network):
-    resp = requests.post('https://internal.sectoken.io/usdt/signFirst',
-                         json={'inputs': inputs, 'scripts': scripts, 'outputs': outputs, 'prikey': privkey,
-                               'network': network})
+def sign_tx(inputs: list, scripts: list, outputs: list, privkey: str, network, _coin: str = "usdt"):
+    resp = requests.post(
+        url=f"{SIGNATURE_HOST + _coin}/signFirst",
+        json={"inputs": inputs, "scripts": scripts, "outputs": outputs, "prikey": privkey, "network": network}
+    )
     if resp.status_code != 200:
-        raise BaseException(f'sign tx HTTP response code {resp.status_code}')
+        raise BaseException(f"sign tx HTTP response code {resp.status_code}")
 
     json_resp = resp.json()
-    code = json_resp['code']
+    code = json_resp.get("code")
     if code != 200:
-        return code, None
+        raise BaseException(f"sign tx response code {code}")
 
-    return 200, json_resp['data']['signed_tx']
+    return json_resp.get("data")
 
 
-def send_tx(url: str, hmac: str, wallet_id: str, signed_tx: str):
-    resp = requests.post(url + 'wallet/usdt/send/', headers={'HMAC': hmac},
-                         json={'wallet_id': wallet_id, 'signed_tx': signed_tx})
+def send_tx(hmac: str, wallet_id: str, signed_tx: str, sequence_id: int, _coin: str = "usdt"):
+    resp = requests.post(
+        url=HOST + f"wallet/{_coin}/send/",
+        headers={"HMAC": hmac},
+        json={"wallet_id": wallet_id, "signed_tx": signed_tx, "sequence_id": sequence_id}
+    )
     if resp.status_code != 200:
-        raise BaseException(f'send tx HTTP response code {resp.status_code}')
+        raise BaseException(f"send tx HTTP response code {resp.status_code}")
 
     json_resp = resp.json()
-    code = json_resp['code']
+    code = json_resp["code"]
     if code != 200:
-        return code, None
-    return 200, json_resp['data']['txid']
+        raise BaseException(f"send tx response code {code}")
+    return json_resp["data"]
