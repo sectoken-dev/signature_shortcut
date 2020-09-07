@@ -4,8 +4,8 @@ from config import SIGNATURE_HOST, HOST
 
 
 def make_and_send(hmac: str, wallet_id: str, outputs: [dict], coin: str = "eos", memo: str = '',
-                  privkey: str = '', _coin="eos"):
-    make_res = make_tx(hmac, wallet_id, outputs, coin, memo, _coin)
+                  privkey: str = '', total=0, _coin="eos"):
+    make_res = make_tx(hmac, wallet_id, outputs, coin, memo, total, _coin)
 
     make_res_privkey = base64.b64decode(make_res['privkey']).decode() if make_res['privkey'] else ""
     unsigned_tx = make_res["unsigned_tx"]
@@ -20,11 +20,11 @@ def make_and_send(hmac: str, wallet_id: str, outputs: [dict], coin: str = "eos",
     return send_res["txid"]
 
 
-def make_tx(hmac: str, wallet_id: str, outputs: [dict], coin: str = "", memo: str = '', _coin='eos'):
+def make_tx(hmac: str, wallet_id: str, outputs: [dict], coin: str = "", memo: str = '', total=0, _coin='eos', ):
     resp = requests.post(
         url=HOST + f'wallet/{_coin}/dotx/',
         headers={'HMAC': hmac},
-        json={'wallet_id': wallet_id, 'outputs': outputs, 'memo': memo, "coin": coin}
+        json={'wallet_id': wallet_id, 'outputs': outputs, 'memo': memo, "total": total, "coin": coin}
     )
 
     if resp.status_code != 200:

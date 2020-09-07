@@ -1,6 +1,6 @@
 import base64
 import requests
-from config import NETWORK, SIGNATURE_HOST, HOST
+from .config import NETWORK, SIGNATURE_HOST, HOST
 
 
 def make_and_send(hmac: str, wallet_id: str, outputs: dict, feerate: int = 0, total: int = 0,

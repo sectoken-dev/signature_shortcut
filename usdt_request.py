@@ -4,8 +4,8 @@ from config import HOST, SIGNATURE_HOST, NETWORK
 
 
 def make_and_send(hmac: str, wallet_id: str, to_address: str, value: str, feerate: int = 0,
-                  total: int = 0, memo: str = "", privkey: str = "", _coin: str = "usdt"):
-    make_res = make_tx(hmac, wallet_id, to_address, value, memo, feerate, total, _coin)
+                  total: int = 0, memo: str = "", privkey: str = "", confirm_target: int = 0, _coin: str = "usdt"):
+    make_res = make_tx(hmac, wallet_id, to_address, value, memo, feerate, total, confirm_target, _coin)
 
     make_res_privkey = base64.b64decode(make_res['privkey']).decode() if make_res['privkey'] else ""
     privkey = privkey if privkey else make_res_privkey
@@ -23,12 +23,12 @@ def make_and_send(hmac: str, wallet_id: str, to_address: str, value: str, feerat
 
 
 def make_tx(hmac: str, wallet_id: str, to_address: str, value: str, memo: str = "", feerate: int = 0,
-            total: int = 0, _coin: str = "usdt"):
+            total: int = 0, confirm_target: int = 0, _coin: str = "usdt"):
     resp = requests.post(
         url=HOST + f"wallet/{_coin}/dotx/",
         headers={"HMAC": hmac},
         json={"wallet_id": wallet_id, "to_address": to_address, "value": value, "feerate": feerate,
-              "total": total, "memo": memo}
+              "total": total, "memo": memo, "confirm_target": confirm_target}
     )
     if resp.status_code != 200:
         raise BaseException(f"make tx HTTP response code {resp.status_code}")
